@@ -1082,6 +1082,14 @@ class _ImmersiveCardScene extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (foilDesign == 7) {
+      return SizedBox(
+        width: width,
+        height: height,
+        child: TcgFoilCardBack(rotateX: rotateX, rotateY: rotateY),
+      );
+    }
+
     final BorderRadius artBorderRadius = BorderRadius.circular(22);
     final Offset backgroundOffset = Offset(rotateY * -10, rotateX * 10);
     final Offset crackOffset = Offset(rotateY * 12, rotateX * -12);
@@ -1178,7 +1186,7 @@ const List<_FoilDesign> _foilDesigns = [
   _FoilDesign('Prism Edge (New)'),
   _FoilDesign('Pastel Curtain (New)'),
   _FoilDesign('Blue Starfall (New)'),
-  _FoilDesign('Cosmic Wave'),
+  _FoilDesign('TcgFoilCardBack'),
 ];
 
 class _FoilDesignGrid extends StatelessWidget {
@@ -1321,7 +1329,7 @@ class _FoilThumbnailPainter extends CustomPainter {
       case 6:
         _drawBlueStarfallThumbnail(canvas, size);
       case 7:
-        _drawCosmicWaveThumbnail(canvas, size);
+        _drawTcgFoilCardBackThumbnail(canvas, size);
       case 8:
         for (double y = 12; y < size.height; y += 14) {
           final Path p = Path()..moveTo(0, y);
@@ -1613,51 +1621,48 @@ class _FoilThumbnailPainter extends CustomPainter {
     }
   }
 
-  void _drawCosmicWaveThumbnail(Canvas canvas, Size size) {
+  void _drawTcgFoilCardBackThumbnail(Canvas canvas, Size size) {
     final Rect rect = Offset.zero & size;
-    canvas.drawRect(
-      rect,
-      Paint()
-        ..shader = const RadialGradient(
-          center: Alignment.center,
-          radius: 1.0,
-          colors: [
-            Color(0xFF9C27B0),
-            Color(0xFF3F51B5),
-            Color(0xFFE91E63),
-            Color(0xFF1A237E),
-          ],
-        ).createShader(rect),
-    );
+    final Paint basePaint = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color(0xFF2A0054),
+          Color(0xFF001F54),
+          Color(0xFF54002A),
+          Color(0xFF332000),
+          Color(0xFF003322),
+        ],
+      ).createShader(rect);
+    canvas.drawRect(rect, basePaint);
 
-    final Paint streakPaint = Paint()
-      ..blendMode = BlendMode.plus
-      ..style = PaintingStyle.stroke
-      ..strokeJoin = StrokeJoin.round;
-    final List<Color> colors = const [
-      Color(0xFF00E5FF),
-      Color(0xFFFFEA00),
-      Color(0xFFFF1744),
-      Color(0xFFD500F9),
+    final Paint wavePaint = Paint()
+      ..blendMode = BlendMode.screen
+      ..style = PaintingStyle.stroke;
+
+    final List<Color> waveColors = const [
+      Color(0xFF9C27B0),
+      Color(0xFF3F51B5),
+      Color(0xFF4CAF50),
+      Color(0xFFFFEB3B),
+      Color(0xFFE91E63),
     ];
-    for (int i = 0; i < 5; i++) {
-      final double xBase = size.width * (0.1 + i * 0.2);
-      final double yBase = size.height * (0.2 + (i % 3) * 0.25);
-      final Path p = Path()
-        ..moveTo(xBase + size.width * 0.15, yBase - size.height * 0.1)
-        ..lineTo(xBase, yBase)
-        ..lineTo(xBase + size.width * 0.15, yBase + size.height * 0.1);
-      streakPaint
-        ..strokeWidth = 2.5
-        ..color = colors[i % colors.length];
-      canvas.drawPath(p, streakPaint);
-    }
-    for (int i = 0; i < 8; i++) {
-      final Offset center = Offset(
-        size.width * (0.2 + (i * 0.3) % 0.8),
-        size.height * (0.1 + i * 0.12),
-      );
-      _drawRadiantFoilStar(canvas, center, 1.8, 0.6);
+
+    for (int i = 0; i < 15; i++) {
+      final double yBase = -size.height * 0.2 + i * size.height * 0.1;
+      final Path wavePath = Path();
+      wavePath.moveTo(0, yBase);
+      for (double x = 0; x <= size.width; x += 10) {
+        final double y =
+            yBase +
+            math.sin((x / size.width) * math.pi * 4 + i) * size.height * 0.05;
+        wavePath.lineTo(x, y);
+      }
+      wavePaint
+        ..strokeWidth = 2.0
+        ..color = waveColors[i % waveColors.length].withValues(alpha: 0.5);
+      canvas.drawPath(wavePath, wavePaint);
     }
   }
 
@@ -4278,4 +4283,328 @@ class _TintedMask extends StatelessWidget {
 
     return child;
   }
+}
+
+class TcgFoilCardBack extends StatefulWidget {
+  const TcgFoilCardBack({
+    super.key,
+    required this.rotateX,
+    required this.rotateY,
+  });
+
+  final double rotateX;
+  final double rotateY;
+
+  @override
+  State<TcgFoilCardBack> createState() => _TcgFoilCardBackState();
+}
+
+class _TcgFoilCardBackState extends State<TcgFoilCardBack>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _blinkController;
+
+  @override
+  void initState() {
+    super.initState();
+    _blinkController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _blinkController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double glare = widget.rotateY * 1.8 - widget.rotateX * 1.1;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(28),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Layer 1: Base Gradient and Texture
+          CustomPaint(painter: _TcgFoilLayer1BasePainter()),
+
+          // Layer 2: Colorful V-Streak Middle Ground (Parallax)
+          Transform.translate(
+            offset: Offset(widget.rotateY * 20, widget.rotateX * 20),
+            child: CustomPaint(painter: _TcgFoilLayer2StreaksPainter()),
+          ),
+
+          // Layer 3: Prismatic Star Field (Blinking & Bling)
+          AnimatedBuilder(
+            animation: _blinkController,
+            builder: (context, child) {
+              return CustomPaint(
+                painter: _TcgFoilLayer3StarsPainter(
+                  animationValue: _blinkController.value,
+                  glare: glare,
+                  rotateX: widget.rotateX,
+                  rotateY: widget.rotateY,
+                ),
+              );
+            },
+          ),
+
+          // Layer 4: Holographic Light-Catch and Glare
+          ShaderMask(
+            blendMode: BlendMode.plus,
+            shaderCallback: (rect) {
+              return LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white.withValues(alpha: 0.0),
+                  const Color(0xFFFFF6B7).withValues(alpha: 0.3),
+                  const Color(0xFFFF56BD).withValues(alpha: 0.4),
+                  Colors.white.withValues(alpha: 0.7),
+                  const Color(0xFF46FFD7).withValues(alpha: 0.4),
+                  Colors.white.withValues(alpha: 0.0),
+                ],
+                stops: const [0.0, 0.4, 0.45, 0.5, 0.55, 1.0],
+                transform: GradientRotation(
+                  -glare * 2.0,
+                ), // Opposite to streaks
+              ).createShader(rect.inflate(rect.width * 0.5));
+            },
+            child: Container(color: Colors.white),
+          ),
+
+          // Layer 5: Frame and Composite
+          CustomPaint(painter: _TcgFoilLayer5BorderPainter()),
+        ],
+      ),
+    );
+  }
+}
+
+class _TcgFoilLayer1BasePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Rect rect = Offset.zero & size;
+    // Deep dark wavy rainbow texture
+    final Paint basePaint = Paint()
+      ..blendMode = BlendMode.srcOver
+      ..shader = const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color(0xFF1E0040),
+          Color(0xFF001844),
+          Color(0xFF440024),
+          Color(0xFF2B1A00),
+          Color(0xFF00221A),
+        ],
+      ).createShader(rect.inflate(size.width * 0.3));
+    canvas.drawRect(rect, basePaint);
+
+    final Paint wavePaint = Paint()
+      ..blendMode = BlendMode.screen
+      ..style = PaintingStyle.stroke;
+
+    final List<Color> waveColors = const [
+      Color(0xFF9C27B0),
+      Color(0xFF3F51B5),
+      Color(0xFF4CAF50),
+      Color(0xFFFFEB3B),
+      Color(0xFFE91E63),
+    ];
+
+    for (int i = 0; i < 45; i++) {
+      final double yBase = -size.height * 0.2 + i * size.height * 0.035;
+      final Path wavePath = Path();
+      wavePath.moveTo(0, yBase);
+      for (double x = 0; x <= size.width; x += 10) {
+        final double y =
+            yBase +
+            math.sin((x / size.width) * math.pi * 10 + i) * size.height * 0.04;
+        wavePath.lineTo(x, y);
+      }
+      wavePaint
+        ..strokeWidth = 4.0
+        ..color = waveColors[i % waveColors.length].withValues(alpha: 0.3);
+      canvas.drawPath(wavePath, wavePaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _TcgFoilLayer2StreaksPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint streakPaint = Paint()
+      ..blendMode = BlendMode.plus
+      ..style = PaintingStyle.stroke
+      ..strokeJoin = StrokeJoin.round;
+
+    final List<Color> streakColors = const [
+      Color(0xFFFF1744), // Red
+      Color(0xFFFFEA00), // Yellow
+      Color(0xFF00E5FF), // Blue
+      Color(0xFFD500F9), // Magenta
+      Color(0xFF00E676), // Green
+    ];
+
+    final math.Random rand = math.Random(42);
+
+    for (int i = 0; i < 35; i++) {
+      final double xBase =
+          rand.nextDouble() * size.width * 1.5 - size.width * 0.25;
+      final double yBase =
+          rand.nextDouble() * size.height * 1.5 - size.height * 0.25;
+      final double scale = 0.5 + rand.nextDouble() * 1.0;
+
+      final Path p = Path()
+        ..moveTo(
+          xBase + size.width * 0.15 * scale,
+          yBase - size.height * 0.08 * scale,
+        )
+        ..lineTo(xBase, yBase)
+        ..lineTo(
+          xBase + size.width * 0.12 * scale,
+          yBase + size.height * 0.06 * scale,
+        );
+
+      final Color color = streakColors[i % streakColors.length];
+
+      streakPaint
+        ..strokeWidth = 15.0 * scale
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12)
+        ..color = color.withValues(alpha: 0.7);
+      canvas.drawPath(p, streakPaint);
+
+      streakPaint
+        ..strokeWidth = 4.0 * scale
+        ..maskFilter = null
+        ..color = Colors.white.withValues(alpha: 0.9);
+      canvas.drawPath(p, streakPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _TcgFoilLayer3StarsPainter extends CustomPainter {
+  _TcgFoilLayer3StarsPainter({
+    required this.animationValue,
+    required this.glare,
+    required this.rotateX,
+    required this.rotateY,
+  });
+
+  final double animationValue;
+  final double glare;
+  final double rotateX;
+  final double rotateY;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final math.Random rand = math.Random(123);
+    for (int i = 0; i < 60; i++) {
+      final double x = rand.nextDouble() * size.width;
+      final double y = rand.nextDouble() * size.height;
+      final double baseRadius = 2.0 + rand.nextDouble() * 6.0;
+      final double phase = rand.nextDouble() * math.pi * 2;
+
+      // Twinkle based on animation and random phase
+      final double twinkle =
+          math.sin(animationValue * math.pi * 4 + phase) * 0.5 + 0.5;
+
+      // Prismatic stars shift position highly based on glare
+      final Offset starCenter = Offset(
+        x + glare * 35 * (rand.nextDouble() * 0.5 + 0.5),
+        y + rotateX * 25 * (rand.nextDouble() * 0.5 + 0.5),
+      );
+
+      _drawRadiantFoilStar(
+        canvas,
+        starCenter,
+        baseRadius * (0.5 + twinkle * 0.8),
+        0.3 + twinkle * 0.7,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _TcgFoilLayer3StarsPainter oldDelegate) {
+    return oldDelegate.animationValue != animationValue ||
+        oldDelegate.glare != glare;
+  }
+}
+
+class _TcgFoilLayer5BorderPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Rect rect = Offset.zero & size;
+    final RRect outer = RRect.fromRectAndRadius(
+      rect,
+      const Radius.circular(28),
+    );
+    final RRect inner = RRect.fromRectAndRadius(
+      rect.deflate(16),
+      const Radius.circular(16),
+    );
+
+    // Border clipping path
+    final Path borderPath = Path()
+      ..addRRect(outer)
+      ..addRRect(inner)
+      ..fillType = PathFillType.evenOdd;
+
+    canvas.clipPath(borderPath);
+
+    // Dense high-frequency rainbow wavy-line border
+    final Paint borderBasePaint = Paint()
+      ..blendMode = BlendMode.srcOver
+      ..color = const Color(0xFF111111);
+    canvas.drawPath(borderPath, borderBasePaint);
+
+    final Paint wavePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+
+    final List<Color> borderColors = const [
+      Color(0xFFFF0000),
+      Color(0xFFFF7F00),
+      Color(0xFFFFFF00),
+      Color(0xFF00FF00),
+      Color(0xFF0000FF),
+      Color(0xFF4B0082),
+      Color(0xFF9400D3),
+    ];
+
+    // Draw wavy lines inside the border area
+    for (int i = 0; i < 40; i++) {
+      final double yBase = -size.height * 0.1 + i * size.height * 0.03;
+      final Path wavePath = Path();
+      wavePath.moveTo(0, yBase);
+      for (double x = 0; x <= size.width; x += 5) {
+        final double y =
+            yBase + math.sin((x / size.width) * math.pi * 30 + i * 0.5) * 8;
+        wavePath.lineTo(x, y);
+      }
+      wavePaint.color = borderColors[i % borderColors.length];
+      canvas.drawPath(wavePath, wavePaint);
+    }
+
+    // Inner bright stroke
+    canvas.drawRRect(
+      inner,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0
+        ..color = Colors.white.withValues(alpha: 0.8),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
