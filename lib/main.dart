@@ -54,39 +54,11 @@ class HomeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    '1. Interactive 3D card with a shiny back\n2. Animated crack mask glow\n3. Holographic rainbow foil frame\n4. Immersive 3D layer card',
+                    '1. Holographic rainbow foil frame\n2. Immersive 3D layer card',
                     style: Theme.of(context).textTheme.bodyLarge,
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 32),
-                  FilledButton(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const CardShowcaseScreen(),
-                        ),
-                      );
-                    },
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Text('PoC 1: 3D Card'),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton.tonal(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const CrackGlowScreen(),
-                        ),
-                      );
-                    },
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Text('PoC 2: Crack Glow'),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
                   FilledButton.tonal(
                     onPressed: () {
                       Navigator.of(context).push(
@@ -111,7 +83,7 @@ class HomeScreen extends StatelessWidget {
                     },
                     child: const Padding(
                       padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Text('PoC 4: Immersive 3D Card'),
+                      child: Text('Immersive 3D Card'),
                     ),
                   ),
                 ],
@@ -938,7 +910,7 @@ class _ImmersiveCardScreenState extends State<ImmersiveCardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('PoC 4: Immersive 3D Card')),
+      appBar: AppBar(title: const Text('Immersive 3D Card')),
       body: SafeArea(
         child: _isInspectingDesign
             ? Column(
@@ -1178,6 +1150,7 @@ const List<_FoilDesign> _foilDesigns = [
   _FoilDesign('Prism Edge (New)'),
   _FoilDesign('Pastel Curtain (New)'),
   _FoilDesign('Blue Starfall (New)'),
+  _FoilDesign('Holo Foil'),
 ];
 
 class _FoilDesignGrid extends StatelessWidget {
@@ -1320,12 +1293,8 @@ class _FoilThumbnailPainter extends CustomPainter {
       case 6:
         _drawBlueStarfallThumbnail(canvas, size);
       case 7:
-        for (double y = 12; y < size.height; y += 14) {
-          final Path p = Path()..moveTo(0, y);
-          p.quadraticBezierTo(size.width * 0.5, y - 10, size.width, y);
-          canvas.drawPath(p, paint);
-        }
-      case 9:
+        _drawHoloFoilThumbnail(canvas, size);
+      case 8:
         for (double y = 12; y < size.height; y += 16) {
           for (double x = 0; x < size.width; x += 16) {
             canvas.drawArc(
@@ -1608,6 +1577,42 @@ class _FoilThumbnailPainter extends CustomPainter {
         );
       }
     }
+  }
+
+  void _drawHoloFoilThumbnail(Canvas canvas, Size size) {
+    final Rect rect = Offset.zero & size;
+    final SweepGradient holoFoil = const SweepGradient(
+      center: Alignment.center,
+      colors: [
+        Color(0xFFFF1493),
+        Color(0xFF00BFFF),
+        Color(0xFFFFD700),
+        Color(0xFF00FA9A),
+        Color(0xFF9400D3),
+        Color(0xFFFF1493),
+      ],
+      stops: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+    );
+    canvas.drawRect(rect, Paint()..shader = holoFoil.createShader(rect));
+
+    final LinearGradient darkBands = const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        Color(0xFFFFFFFF),
+        Color(0xFF333333),
+        Color(0xFFFFFFFF),
+        Color(0xFF333333),
+        Color(0xFFFFFFFF),
+      ],
+      stops: [0.0, 0.25, 0.5, 0.75, 1.0],
+    );
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..blendMode = BlendMode.multiply
+        ..shader = darkBands.createShader(rect),
+    );
   }
 
   void _drawCosmicStarlightThumbnail(Canvas canvas, Size size) {
@@ -2230,7 +2235,7 @@ class _ImmersiveRimPainter extends CustomPainter {
       case 6:
         _drawBlueStarfallNew(canvas, size, glare);
       case 7:
-        _drawCosmicWave(canvas, size, glare);
+        _drawHoloFoil(canvas, size, glare);
       case 8:
         _drawWaves(canvas, size, glare);
       case 9:
@@ -3860,6 +3865,154 @@ class _ImmersiveRimPainter extends CustomPainter {
         ..blendMode = BlendMode.plus
         ..shader = glareSweep.createShader(rect.inflate(size.width * 0.3)),
     );
+  }
+
+  void _drawHoloFoil(Canvas canvas, Size size, double glare) {
+    final Rect rect = Offset.zero & size;
+    final Rect shaderBounds = rect.inflate(size.width * 0.3);
+
+    final SweepGradient holoFoil = SweepGradient(
+      center: Alignment(rotateY * 1.5, rotateX * 1.5),
+      colors: const [
+        Color(0xFFFF1493),
+        Color(0xFF00BFFF),
+        Color(0xFFFFD700),
+        Color(0xFF00FA9A),
+        Color(0xFF9400D3),
+        Color(0xFFFF1493),
+      ],
+      stops: const [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+      transform: GradientRotation(glare * 2.0),
+    );
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..blendMode = BlendMode.srcOver
+        ..shader = holoFoil.createShader(shaderBounds),
+    );
+
+    final double glarePos = (rotateY - rotateX) * 2.5;
+    final LinearGradient darkBands = LinearGradient(
+      begin: Alignment(-2.0 + glarePos, -2.0 + glarePos),
+      end: Alignment(2.0 + glarePos, 2.0 + glarePos),
+      colors: const [
+        Color(0xFFFFFFFF),
+        Color(0xFF333333),
+        Color(0xFFFFFFFF),
+        Color(0xFF333333),
+        Color(0xFFFFFFFF),
+      ],
+      stops: const [0.0, 0.25, 0.5, 0.75, 1.0],
+    );
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..blendMode = BlendMode.multiply
+        ..shader = darkBands.createShader(shaderBounds),
+    );
+
+    final LinearGradient brightGlare = LinearGradient(
+      begin: Alignment(-2.0 + glarePos, -2.0 + glarePos),
+      end: Alignment(2.0 + glarePos, 2.0 + glarePos),
+      colors: const [
+        Color(0x00FFFFFF),
+        Color(0x00FFFFFF),
+        Color(0x88FFFFFF),
+        Color(0xFFFFFFFF),
+        Color(0x88FFFFFF),
+        Color(0x00FFFFFF),
+        Color(0x00FFFFFF),
+      ],
+      stops: const [0.0, 0.45, 0.48, 0.5, 0.52, 0.55, 1.0],
+    );
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..blendMode = BlendMode.plus
+        ..shader = brightGlare.createShader(shaderBounds),
+    );
+
+    final double glarePos2 = (rotateY + rotateX) * 2.5;
+    final LinearGradient brightGlare2 = LinearGradient(
+      begin: Alignment(2.0 - glarePos2, -2.0 - glarePos2),
+      end: Alignment(-2.0 - glarePos2, 2.0 - glarePos2),
+      colors: const [
+        Color(0x00FFFFFF),
+        Color(0x00FFFFFF),
+        Color(0x44FFFFFF),
+        Color(0xBBFFFFFF),
+        Color(0x44FFFFFF),
+        Color(0x00FFFFFF),
+        Color(0x00FFFFFF),
+      ],
+      stops: const [0.0, 0.46, 0.49, 0.5, 0.51, 0.54, 1.0],
+    );
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..blendMode = BlendMode.plus
+        ..shader = brightGlare2.createShader(shaderBounds),
+    );
+
+    for (int i = 0; i < 30; i++) {
+      final double px = ((math.sin(i * 1.73) * 0.5 + 0.5) * size.width) + rotateY * size.width * 1.5;
+      final double py = ((math.cos(i * 2.41) * 0.5 + 0.5) * size.height) + rotateX * size.height * 1.5;
+
+      final double wrappedPx = px % size.width;
+      final double wrappedPy = py % size.height;
+
+      final double blink = (math.sin(glare * 10.0 + i * 1.2) + 1) / 2;
+      final double radius = 1.5 + blink * 3.0;
+
+      final Color sparkleColor = Colors.white.withValues(alpha: 0.4 + blink * 0.6);
+
+      canvas.drawCircle(
+        Offset(wrappedPx, wrappedPy),
+        radius,
+        Paint()
+          ..blendMode = BlendMode.plus
+          ..shader = ui.Gradient.radial(Offset(wrappedPx, wrappedPy), radius, [
+            sparkleColor,
+            sparkleColor.withValues(alpha: 0),
+          ]),
+      );
+
+      canvas.drawRect(
+        Rect.fromCenter(
+          center: Offset(wrappedPx, wrappedPy),
+          width: radius * 6,
+          height: radius * 0.8,
+        ),
+        Paint()
+          ..blendMode = BlendMode.plus
+          ..shader = ui.Gradient.radial(
+            Offset(wrappedPx, wrappedPy),
+            radius * 3,
+            [
+              Colors.white.withValues(alpha: blink),
+              Colors.white.withValues(alpha: 0),
+            ],
+          ),
+      );
+
+      canvas.drawRect(
+        Rect.fromCenter(
+          center: Offset(wrappedPx, wrappedPy),
+          width: radius * 0.8,
+          height: radius * 6,
+        ),
+        Paint()
+          ..blendMode = BlendMode.plus
+          ..shader = ui.Gradient.radial(
+            Offset(wrappedPx, wrappedPy),
+            radius * 3,
+            [
+              Colors.white.withValues(alpha: blink),
+              Colors.white.withValues(alpha: 0),
+            ],
+          ),
+      );
+    }
   }
 
   void _drawCosmicWave(Canvas canvas, Size size, double glare) {

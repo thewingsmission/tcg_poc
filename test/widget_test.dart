@@ -14,9 +14,7 @@ void main() {
     await tester.pumpWidget(const MyApp());
 
     expect(find.text('Flutter PoC Gallery'), findsOneWidget);
-    expect(find.text('PoC 1: 3D Card'), findsOneWidget);
-    expect(find.text('PoC 2: Crack Glow'), findsOneWidget);
     expect(find.text('PoC 3: Foil Frame'), findsOneWidget);
-    expect(find.text('PoC 4: Immersive 3D Card'), findsOneWidget);
+    expect(find.text('Immersive 3D Card'), findsOneWidget);
   });
 }
