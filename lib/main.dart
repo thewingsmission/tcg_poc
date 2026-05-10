@@ -2616,7 +2616,7 @@ class _ImmersiveRimPainter extends CustomPainter {
 
     final Paint whiteBandPaint = Paint()..blendMode = BlendMode.screen;
     final List<double> bandXs = [-0.15, 0.35, 0.75];
-    final List<double> bandWidths = [0.28, 0.32, 0.25];
+    final List<double> bandWidths = [0.112, 0.128, 0.10];
     final List<List<Color>> bandColors = const [
       [
         Color(0x00FFFFFF),
@@ -2792,18 +2792,18 @@ class _ImmersiveRimPainter extends CustomPainter {
       rect,
       Paint()
         ..blendMode = BlendMode.srcOver
-        ..shader = const RadialGradient(
-          center: Alignment.topLeft,
+        ..shader = RadialGradient(
+          center: Alignment(-1.0 + rotateY * 0.4, -1.0 + rotateX * 0.4),
           radius: 2.5,
-          colors: [
+          colors: const [
             Color(0xFF7FA7E8),
             Color(0xFF2C4E89),
             Color(0xFF14284F),
             Color(0xFF070D20),
             Color(0xFF02040D),
           ],
-          stops: [0.0, 0.28, 0.58, 0.82, 1.0],
-        ).createShader(rect),
+          stops: const [0.0, 0.28, 0.58, 0.82, 1.0],
+        ).createShader(rect.inflate(size.width * 0.3)),
     );
 
     final List<Offset> nebulaCenters = [
@@ -2817,12 +2817,13 @@ class _ImmersiveRimPainter extends CustomPainter {
       Color(0xFFFFE2A4),
     ];
     for (int i = 0; i < nebulaCenters.length; i++) {
+      final Offset shiftedCenter = nebulaCenters[i] + Offset(glare * 10, rotateX * 8);
       final Rect nebulaRect = Rect.fromCircle(
-        center: nebulaCenters[i],
+        center: shiftedCenter,
         radius: size.width * (0.22 + i * 0.04),
       );
       canvas.drawCircle(
-        nebulaCenters[i],
+        shiftedCenter,
         size.width * (0.22 + i * 0.04),
         Paint()
           ..blendMode = BlendMode.screen
@@ -2842,7 +2843,7 @@ class _ImmersiveRimPainter extends CustomPainter {
       final Offset p = Offset(
         (math.sin(i * 8.91) * 21347.17).abs() % size.width,
         (math.sin(i * 37.43) * 51491.31).abs() % size.height,
-      );
+      ) + Offset(glare * 20, rotateX * 15);
       final double twinkle = 0.55 + math.max(0.0, math.sin(i * 0.37)) * 0.45;
       dustPaint.color = (i % 11 == 0 ? const Color(0xFFFFE9A6) : Colors.white)
           .withValues(alpha: (0.14 + (i % 5) * 0.045) * twinkle);
@@ -2859,13 +2860,14 @@ class _ImmersiveRimPainter extends CustomPainter {
     ];
     for (int i = 0; i < starCenters.length; i++) {
       final double pulse = 0.55 + math.max(0.0, math.sin(i * 0.8)) * 0.38;
-      _drawRadiantFoilStar(canvas, starCenters[i], 6.5 + (i % 3) * 2.0, pulse);
+      final Offset shiftedStar = starCenters[i] + Offset(glare * 35, rotateX * 25);
+      _drawRadiantFoilStar(canvas, shiftedStar, 6.5 + (i % 3) * 2.0, pulse);
       for (int j = 0; j < 18; j++) {
         final double angle = j * 0.71 + i * 1.1;
         final double distance = 10 + (j % 6) * 4.2;
         dustPaint.color = Colors.white.withValues(alpha: 0.1 + (j % 4) * 0.04);
         canvas.drawCircle(
-          starCenters[i] + Offset(math.cos(angle), math.sin(angle)) * distance,
+          shiftedStar + Offset(math.cos(angle), math.sin(angle)) * distance,
           0.4 + (j % 3) * 0.18,
           dustPaint,
         );
@@ -3710,13 +3712,27 @@ class _ImmersiveRimPainter extends CustomPainter {
             Color(0xFFD5A4FF),
           ],
           stops: const [0.0, 0.14, 0.3, 0.48, 0.66, 0.84, 1.0],
-        ).createShader(rect),
+        ).createShader(rect.inflate(size.width * 0.3)),
     );
-    final Paint whiteBandPaint = Paint()..blendMode = BlendMode.screen;
+
+    final LinearGradient lengthGradient = LinearGradient(
+      begin: Alignment.bottomLeft,
+      end: Alignment.topRight,
+      colors: [
+        Colors.white.withValues(alpha: 0.0),
+        Colors.white.withValues(alpha: 0.85),
+        Colors.white.withValues(alpha: 0.3),
+        Colors.white.withValues(alpha: 0.95),
+        Colors.white.withValues(alpha: 0.0),
+      ],
+      stops: const [0.0, 0.3, 0.5, 0.7, 1.0],
+    );
+
     final List<double> bandXs = [-0.15, 0.35, 0.75];
-    final List<double> bandWidths = [0.28, 0.32, 0.25];
+    final List<double> bandWidths = [0.112, 0.128, 0.10];
+
     for (int i = 0; i < 3; i++) {
-      final double x = size.width * bandXs[i];
+      final double x = size.width * bandXs[i] + glare * 25;
       final double bandWidth = size.width * bandWidths[i];
       final Path band = Path()
         ..moveTo(x, size.height * 1.08)
@@ -3724,8 +3740,40 @@ class _ImmersiveRimPainter extends CustomPainter {
         ..lineTo(x + bandWidth + size.width * 0.58, -size.height * 0.08)
         ..lineTo(x + size.width * 0.58, -size.height * 0.08)
         ..close();
-      whiteBandPaint.color = Colors.white.withValues(alpha: 0.6);
-      canvas.drawPath(band, whiteBandPaint);
+
+      canvas.drawPath(
+        band,
+        Paint()
+          ..blendMode = BlendMode.plus
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16)
+          ..shader = lengthGradient.createShader(
+            rect.inflate(size.width * 0.3),
+          ),
+      );
+      canvas.drawPath(
+        band,
+        Paint()
+          ..blendMode = BlendMode.screen
+          ..shader = lengthGradient.createShader(
+            rect.inflate(size.width * 0.3),
+          ),
+      );
+
+      final Path lightLine = Path()
+        ..moveTo(x + bandWidth * 0.5, size.height * 1.08)
+        ..lineTo(x + bandWidth * 0.5 + size.width * 0.58, -size.height * 0.08);
+
+      canvas.drawPath(
+        lightLine,
+        Paint()
+          ..blendMode = BlendMode.plus
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 4.0
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4)
+          ..shader = lengthGradient.createShader(
+            rect.inflate(size.width * 0.3),
+          ),
+      );
     }
   }
 
@@ -3746,7 +3794,7 @@ class _ImmersiveRimPainter extends CustomPainter {
             Color(0xFFFF65C7),
           ],
           stops: const [0.0, 0.38, 0.68, 0.88, 1.0],
-        ).createShader(rect),
+        ).createShader(rect.inflate(size.width * 0.3)),
     );
     final Paint beamPaint = Paint()
       ..blendMode = BlendMode.plus
@@ -3761,20 +3809,48 @@ class _ImmersiveRimPainter extends CustomPainter {
     for (int i = 0; i < 28; i++) {
       final double response = 0.5;
       final Offset start = Offset(
-        -size.width * 0.28 + i * size.width * 0.058,
-        size.height * (1.05 - (i % 7) * 0.12),
+        -size.width * 0.28 + i * size.width * 0.058 + glare * 30,
+        size.height * (1.05 - (i % 7) * 0.12) + rotateX * 15,
       );
       final Offset direction = Offset(
         size.width * (0.22 + (i % 3) * 0.05),
         -size.height * (0.4 + (i % 4) * 0.08),
       );
+
+      final Color baseColor = beamColors[i % beamColors.length];
       beamPaint
         ..strokeWidth = 1.8 + (i % 5) * 0.8
-        ..color = beamColors[i % beamColors.length].withValues(
-          alpha: 0.18 + response * 0.2,
+        ..shader = ui.Gradient.linear(
+          start,
+          start + direction,
+          [
+            baseColor.withValues(alpha: 0.0),
+            baseColor.withValues(alpha: 0.6 + response * 0.4),
+            Colors.white.withValues(alpha: 0.9),
+            baseColor.withValues(alpha: 0.0),
+          ],
+          const [0.0, 0.4, 0.8, 1.0],
         );
       canvas.drawLine(start, start + direction, beamPaint);
     }
+
+    final LinearGradient glareSweep = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        Colors.white.withValues(alpha: 0.0),
+        Colors.white.withValues(alpha: 0.85),
+        Colors.white.withValues(alpha: 0.0),
+      ],
+      stops: const [0.0, 0.5, 1.0],
+      transform: GradientRotation(glare * 1.5),
+    );
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..blendMode = BlendMode.plus
+        ..shader = glareSweep.createShader(rect.inflate(size.width * 0.3)),
+    );
   }
 
   void _drawMusicPearlNew(Canvas canvas, Size size, double glare) {
