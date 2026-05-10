@@ -1178,6 +1178,7 @@ const List<_FoilDesign> _foilDesigns = [
   _FoilDesign('Prism Edge (New)'),
   _FoilDesign('Pastel Curtain (New)'),
   _FoilDesign('Blue Starfall (New)'),
+  _FoilDesign('Cosmic Wave'),
 ];
 
 class _FoilDesignGrid extends StatelessWidget {
@@ -1320,16 +1321,7 @@ class _FoilThumbnailPainter extends CustomPainter {
       case 6:
         _drawBlueStarfallThumbnail(canvas, size);
       case 7:
-        canvas.drawCircle(
-          Offset(size.width * 0.3, size.height * 0.3),
-          size.width * 0.18,
-          fill..color = Colors.white.withValues(alpha: 0.36),
-        );
-        canvas.drawLine(
-          Offset(size.width * 0.3, size.height * 0.3),
-          Offset(size.width, size.height),
-          paint..strokeWidth = 4,
-        );
+        _drawCosmicWaveThumbnail(canvas, size);
       case 8:
         for (double y = 12; y < size.height; y += 14) {
           final Path p = Path()..moveTo(0, y);
@@ -1618,6 +1610,54 @@ class _FoilThumbnailPainter extends CustomPainter {
           dustPaint,
         );
       }
+    }
+  }
+
+  void _drawCosmicWaveThumbnail(Canvas canvas, Size size) {
+    final Rect rect = Offset.zero & size;
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = const RadialGradient(
+          center: Alignment.center,
+          radius: 1.0,
+          colors: [
+            Color(0xFF9C27B0),
+            Color(0xFF3F51B5),
+            Color(0xFFE91E63),
+            Color(0xFF1A237E),
+          ],
+        ).createShader(rect),
+    );
+
+    final Paint streakPaint = Paint()
+      ..blendMode = BlendMode.plus
+      ..style = PaintingStyle.stroke
+      ..strokeJoin = StrokeJoin.round;
+    final List<Color> colors = const [
+      Color(0xFF00E5FF),
+      Color(0xFFFFEA00),
+      Color(0xFFFF1744),
+      Color(0xFFD500F9),
+    ];
+    for (int i = 0; i < 5; i++) {
+      final double xBase = size.width * (0.1 + i * 0.2);
+      final double yBase = size.height * (0.2 + (i % 3) * 0.25);
+      final Path p = Path()
+        ..moveTo(xBase + size.width * 0.15, yBase - size.height * 0.1)
+        ..lineTo(xBase, yBase)
+        ..lineTo(xBase + size.width * 0.15, yBase + size.height * 0.1);
+      streakPaint
+        ..strokeWidth = 2.5
+        ..color = colors[i % colors.length];
+      canvas.drawPath(p, streakPaint);
+    }
+    for (int i = 0; i < 8; i++) {
+      final Offset center = Offset(
+        size.width * (0.2 + (i * 0.3) % 0.8),
+        size.height * (0.1 + i * 0.12),
+      );
+      _drawRadiantFoilStar(canvas, center, 1.8, 0.6);
     }
   }
 
@@ -2239,7 +2279,7 @@ class _ImmersiveRimPainter extends CustomPainter {
       case 6:
         _drawBlueStarfallNew(canvas, size, glare);
       case 7:
-        _drawComet(canvas, size, glare);
+        _drawCosmicWave(canvas, size, glare);
       case 8:
         _drawWaves(canvas, size, glare);
       case 9:
@@ -2254,7 +2294,7 @@ class _ImmersiveRimPainter extends CustomPainter {
         break;
     }
 
-    if (foilDesign != 5) {
+    if (foilDesign != 5 && foilDesign != 7) {
       canvas.drawRect(
         rect,
         Paint()
@@ -2817,7 +2857,8 @@ class _ImmersiveRimPainter extends CustomPainter {
       Color(0xFFFFE2A4),
     ];
     for (int i = 0; i < nebulaCenters.length; i++) {
-      final Offset shiftedCenter = nebulaCenters[i] + Offset(glare * 10, rotateX * 8);
+      final Offset shiftedCenter =
+          nebulaCenters[i] + Offset(glare * 10, rotateX * 8);
       final Rect nebulaRect = Rect.fromCircle(
         center: shiftedCenter,
         radius: size.width * (0.22 + i * 0.04),
@@ -2840,10 +2881,12 @@ class _ImmersiveRimPainter extends CustomPainter {
 
     final Paint dustPaint = Paint()..blendMode = BlendMode.plus;
     for (int i = 0; i < 720; i++) {
-      final Offset p = Offset(
-        (math.sin(i * 8.91) * 21347.17).abs() % size.width,
-        (math.sin(i * 37.43) * 51491.31).abs() % size.height,
-      ) + Offset(glare * 20, rotateX * 15);
+      final Offset p =
+          Offset(
+            (math.sin(i * 8.91) * 21347.17).abs() % size.width,
+            (math.sin(i * 37.43) * 51491.31).abs() % size.height,
+          ) +
+          Offset(glare * 20, rotateX * 15);
       final double twinkle = 0.55 + math.max(0.0, math.sin(i * 0.37)) * 0.45;
       dustPaint.color = (i % 11 == 0 ? const Color(0xFFFFE9A6) : Colors.white)
           .withValues(alpha: (0.14 + (i % 5) * 0.045) * twinkle);
@@ -2860,7 +2903,8 @@ class _ImmersiveRimPainter extends CustomPainter {
     ];
     for (int i = 0; i < starCenters.length; i++) {
       final double pulse = 0.55 + math.max(0.0, math.sin(i * 0.8)) * 0.38;
-      final Offset shiftedStar = starCenters[i] + Offset(glare * 35, rotateX * 25);
+      final Offset shiftedStar =
+          starCenters[i] + Offset(glare * 35, rotateX * 25);
       _drawRadiantFoilStar(canvas, shiftedStar, 6.5 + (i % 3) * 2.0, pulse);
       for (int j = 0; j < 18; j++) {
         final double angle = j * 0.71 + i * 1.1;
@@ -3840,6 +3884,151 @@ class _ImmersiveRimPainter extends CustomPainter {
       colors: [
         Colors.white.withValues(alpha: 0.0),
         Colors.white.withValues(alpha: 0.85),
+        Colors.white.withValues(alpha: 0.0),
+      ],
+      stops: const [0.0, 0.5, 1.0],
+      transform: GradientRotation(glare * 1.5),
+    );
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..blendMode = BlendMode.plus
+        ..shader = glareSweep.createShader(rect.inflate(size.width * 0.3)),
+    );
+  }
+
+  void _drawCosmicWave(Canvas canvas, Size size, double glare) {
+    final Rect rect = Offset.zero & size;
+    // Deep cosmic background
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..blendMode = BlendMode.srcOver
+        ..shader = RadialGradient(
+          center: Alignment(rotateY * 0.4, rotateX * 0.4),
+          radius: 2.5,
+          colors: const [
+            Color(0xFF9C27B0),
+            Color(0xFF3F51B5),
+            Color(0xFFE91E63),
+            Color(0xFF1A237E),
+          ],
+          stops: const [0.0, 0.4, 0.7, 1.0],
+        ).createShader(rect.inflate(size.width * 0.3)),
+    );
+
+    // Wavy pattern background
+    final Paint wavePaint = Paint()
+      ..blendMode = BlendMode.screen
+      ..style = PaintingStyle.stroke;
+    final List<Color> waveColors = [
+      const Color(0xFF00E5FF),
+      const Color(0xFFFFEA00),
+      const Color(0xFFFF1744),
+      const Color(0xFFD500F9),
+    ];
+    for (int i = 0; i < 40; i++) {
+      final double yBase =
+          -size.height * 0.2 + i * size.height * 0.04 + rotateX * 10;
+      final Path wavePath = Path();
+      wavePath.moveTo(-size.width * 0.2, yBase);
+      for (
+        double x = -size.width * 0.2;
+        x <= size.width * 1.2;
+        x += size.width * 0.05
+      ) {
+        final double y =
+            yBase +
+            math.sin((x / size.width) * math.pi * 6 + i * 0.5 + glare * 2) *
+                size.height *
+                0.05;
+        wavePath.lineTo(x + glare * 15, y);
+      }
+      wavePaint
+        ..strokeWidth = 3.0 + (i % 3) * 1.5
+        ..color = waveColors[i % waveColors.length].withValues(alpha: 0.15);
+      canvas.drawPath(wavePath, wavePaint);
+    }
+
+    // Energy Streaks (V-shapes)
+    final Paint streakPaint = Paint()
+      ..blendMode = BlendMode.plus
+      ..style = PaintingStyle.stroke
+      ..strokeJoin = StrokeJoin.round;
+    final List<Color> streakColors = [
+      const Color(0xFF00FFFF), // Cyan
+      const Color(0xFFFF00FF), // Magenta
+      const Color(0xFFFFFF00), // Yellow
+      const Color(0xFFFF0000), // Red
+      const Color(0xFF00FF00), // Green
+    ];
+    for (int i = 0; i < 25; i++) {
+      final double xBase =
+          (i * 0.15) * size.width % (size.width * 1.2) -
+          size.width * 0.1 +
+          glare * 25;
+      final double yBase =
+          (i * 0.23) * size.height % (size.height * 1.2) -
+          size.height * 0.1 +
+          rotateX * 20;
+
+      final Path streakPath = Path();
+      streakPath.moveTo(xBase + size.width * 0.15, yBase - size.height * 0.08);
+      streakPath.lineTo(xBase, yBase);
+      streakPath.lineTo(xBase + size.width * 0.2, yBase + size.height * 0.1);
+
+      final Rect streakBounds = streakPath.getBounds();
+      final Color color = streakColors[i % streakColors.length];
+
+      // Glow
+      streakPaint
+        ..strokeWidth = 12.0 + (i % 3) * 4.0
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10)
+        ..shader = LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [
+            color.withValues(alpha: 0.0),
+            color.withValues(alpha: 0.9),
+            color.withValues(alpha: 0.0),
+          ],
+        ).createShader(streakBounds);
+      canvas.drawPath(streakPath, streakPaint);
+
+      // Inner core
+      streakPaint
+        ..strokeWidth = 4.0
+        ..maskFilter = null
+        ..shader = LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [
+            Colors.white.withValues(alpha: 0.0),
+            Colors.white.withValues(alpha: 0.9),
+            Colors.white.withValues(alpha: 0.0),
+          ],
+        ).createShader(streakBounds);
+      canvas.drawPath(streakPath, streakPaint);
+    }
+
+    // Stars/Sparkles
+    for (int i = 0; i < 45; i++) {
+      final double x =
+          (math.sin(i * 12.4) * 0.5 + 0.5) * size.width + glare * 35;
+      final double y =
+          (math.cos(i * 7.8) * 0.5 + 0.5) * size.height + rotateX * 25;
+      final double radius = 3.0 + (i % 5) * 1.5;
+      final double alpha = 0.4 + math.max(0.0, math.sin(i * 0.9)) * 0.6;
+      _drawRadiantFoilStar(canvas, Offset(x, y), radius, alpha);
+    }
+
+    // Glare sweep
+    final LinearGradient glareSweep = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        Colors.white.withValues(alpha: 0.0),
+        Colors.white.withValues(alpha: 0.7),
         Colors.white.withValues(alpha: 0.0),
       ],
       stops: const [0.0, 0.5, 1.0],
