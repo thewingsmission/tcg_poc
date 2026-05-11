@@ -53,26 +53,7 @@ class HomeScreen extends StatelessWidget {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
-                  Text(
-                    '1. Holographic rainbow foil frame\n2. Immersive 3D layer card',
-                    style: Theme.of(context).textTheme.bodyLarge,
-                    textAlign: TextAlign.center,
-                  ),
                   const SizedBox(height: 32),
-                  FilledButton.tonal(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const FoilFrameScreen(),
-                        ),
-                      );
-                    },
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Text('PoC 3: Foil Frame'),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
                   FilledButton.tonal(
                     onPressed: () {
                       Navigator.of(context).push(
@@ -84,6 +65,20 @@ class HomeScreen extends StatelessWidget {
                     child: const Padding(
                       padding: EdgeInsets.symmetric(vertical: 16),
                       child: Text('Immersive 3D Card'),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton.tonal(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const BearScreen(),
+                        ),
+                      );
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Text('Bear'),
                     ),
                   ),
                 ],
@@ -466,393 +461,6 @@ class _CardBackPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _CardBackPainter oldDelegate) {
-    return oldDelegate.shimmerProgress != shimmerProgress ||
-        oldDelegate.rotateX != rotateX ||
-        oldDelegate.rotateY != rotateY;
-  }
-}
-
-class FoilFrameScreen extends StatefulWidget {
-  const FoilFrameScreen({super.key});
-
-  @override
-  State<FoilFrameScreen> createState() => _FoilFrameScreenState();
-}
-
-class _FoilFrameScreenState extends State<FoilFrameScreen>
-    with SingleTickerProviderStateMixin {
-  static const String _cardAsset = 'image/white tiger card.png';
-  static const double _fallbackAspectRatio = 0.7;
-  static const double _maxTilt = 0.38;
-
-  late final AnimationController _shineController;
-  double _aspectRatio = _fallbackAspectRatio;
-  double _rotateX = 0;
-  double _rotateY = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _shineController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 4),
-    )..repeat();
-    _loadAspectRatio();
-  }
-
-  Future<void> _loadAspectRatio() async {
-    final ByteData data = await rootBundle.load(_cardAsset);
-    final ui.ImmutableBuffer buffer = await ui.ImmutableBuffer.fromUint8List(
-      data.buffer.asUint8List(),
-    );
-    final ui.ImageDescriptor descriptor = await ui.ImageDescriptor.encoded(
-      buffer,
-    );
-    final double aspectRatio = descriptor.width / descriptor.height;
-
-    if (mounted) {
-      setState(() {
-        _aspectRatio = aspectRatio;
-      });
-    }
-  }
-
-  void _updateTilt(Offset localPosition, Size size) {
-    final double dx = ((localPosition.dx / size.width) * 2 - 1).clamp(
-      -1.0,
-      1.0,
-    );
-    final double dy = ((localPosition.dy / size.height) * 2 - 1).clamp(
-      -1.0,
-      1.0,
-    );
-
-    setState(() {
-      _rotateY = dx * _maxTilt;
-      _rotateX = -dy * _maxTilt;
-    });
-  }
-
-  void _resetTilt() {
-    setState(() {
-      _rotateX = 0;
-      _rotateY = 0;
-    });
-  }
-
-  @override
-  void dispose() {
-    _shineController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('PoC 3: Foil Frame')),
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final double frontWidth = math.min(
-              constraints.maxWidth * 0.72,
-              320,
-            );
-            final double frontHeight = frontWidth / _aspectRatio;
-            final double backWidth = frontWidth + 40;
-            final double backHeight = backWidth / _aspectRatio;
-            final Size interactiveSize = Size(backWidth, backHeight);
-
-            return Center(
-              child: GestureDetector(
-                onPanDown: (details) =>
-                    _updateTilt(details.localPosition, interactiveSize),
-                onPanUpdate: (details) =>
-                    _updateTilt(details.localPosition, interactiveSize),
-                onPanEnd: (_) => _resetTilt(),
-                onPanCancel: _resetTilt,
-                child: AnimatedBuilder(
-                  animation: _shineController,
-                  builder: (context, child) {
-                    final Matrix4 transform = Matrix4.identity()
-                      ..setEntry(3, 2, 0.0014)
-                      ..rotateX(_rotateX)
-                      ..rotateY(_rotateY);
-
-                    return Transform(
-                      alignment: Alignment.center,
-                      transform: transform,
-                      child: child,
-                    );
-                  },
-                  child: _FoilCardScene(
-                    frontWidth: frontWidth,
-                    frontHeight: frontHeight,
-                    backWidth: backWidth,
-                    backHeight: backHeight,
-                    aspectRatio: _aspectRatio,
-                    rotateX: _rotateX,
-                    rotateY: _rotateY,
-                    shimmerProgress: _shineController.value,
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-class _FoilCardScene extends StatelessWidget {
-  const _FoilCardScene({
-    required this.frontWidth,
-    required this.frontHeight,
-    required this.backWidth,
-    required this.backHeight,
-    required this.aspectRatio,
-    required this.rotateX,
-    required this.rotateY,
-    required this.shimmerProgress,
-  });
-
-  final double frontWidth;
-  final double frontHeight;
-  final double backWidth;
-  final double backHeight;
-  final double aspectRatio;
-  final double rotateX;
-  final double rotateY;
-  final double shimmerProgress;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: backWidth,
-      height: backHeight,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          CustomPaint(
-            size: Size(backWidth, backHeight),
-            painter: _FoilFramePainter(
-              shimmerProgress: shimmerProgress,
-              rotateX: rotateX,
-              rotateY: rotateY,
-            ),
-          ),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: SizedBox(
-              width: frontWidth,
-              height: frontHeight,
-              child: Image.asset(
-                'image/white tiger card.png',
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FoilFramePainter extends CustomPainter {
-  const _FoilFramePainter({
-    required this.shimmerProgress,
-    required this.rotateX,
-    required this.rotateY,
-  });
-
-  final double shimmerProgress;
-  final double rotateX;
-  final double rotateY;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final RRect rrect = RRect.fromRectAndRadius(
-      Offset.zero & size,
-      const Radius.circular(28),
-    );
-
-    canvas.save();
-    canvas.clipRRect(rrect);
-
-    final Rect rect = Offset.zero & size;
-    final double cycle = shimmerProgress * math.pi * 2;
-
-    // 1. Holographic Rainbow Base (Sweep Gradient)
-    // Creates the vibrant rainbow colors that spin and shift with tilt
-    final SweepGradient holoFoil = SweepGradient(
-      center: Alignment(rotateY * 1.5, rotateX * 1.5),
-      colors: const [
-        Color(0xFFFF1493), // Deep Pink
-        Color(0xFF00BFFF), // Deep Sky Blue
-        Color(0xFFFFD700), // Gold
-        Color(0xFF00FA9A), // Medium Spring Green
-        Color(0xFF9400D3), // Dark Violet
-        Color(0xFFFF1493), // Deep Pink
-      ],
-      stops: const [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
-      transform: GradientRotation(cycle * 0.5 + rotateY * 2.0),
-    );
-    canvas.drawRect(rect, Paint()..shader = holoFoil.createShader(rect));
-
-    // 2. Dark Metallic Contrast (Multiply)
-    // Adds the dark areas of the foil reflection so the brights pop
-    final double glarePos = (rotateY - rotateX) * 2.5;
-    final LinearGradient darkBands = LinearGradient(
-      begin: Alignment(-2.0 + glarePos, -2.0 + glarePos),
-      end: Alignment(2.0 + glarePos, 2.0 + glarePos),
-      colors: const [
-        Color(0xFFFFFFFF),
-        Color(0xFF333333),
-        Color(0xFFFFFFFF),
-        Color(0xFF333333),
-        Color(0xFFFFFFFF),
-      ],
-      stops: const [0.0, 0.25, 0.5, 0.75, 1.0],
-    );
-    canvas.drawRect(
-      rect,
-      Paint()
-        ..blendMode = BlendMode.multiply
-        ..shader = darkBands.createShader(rect),
-    );
-
-    // 3. Sharp White Glare (Plus)
-    // The main bright reflection that sweeps across the card
-    final LinearGradient brightGlare = LinearGradient(
-      begin: Alignment(-2.0 + glarePos, -2.0 + glarePos),
-      end: Alignment(2.0 + glarePos, 2.0 + glarePos),
-      colors: const [
-        Color(0x00FFFFFF),
-        Color(0x00FFFFFF),
-        Color(0x88FFFFFF),
-        Color(0xFFFFFFFF),
-        Color(0x88FFFFFF),
-        Color(0x00FFFFFF),
-        Color(0x00FFFFFF),
-      ],
-      stops: const [0.0, 0.45, 0.48, 0.5, 0.52, 0.55, 1.0],
-    );
-    canvas.drawRect(
-      rect,
-      Paint()
-        ..blendMode = BlendMode.plus
-        ..shader = brightGlare.createShader(rect),
-    );
-
-    // 4. Secondary Glare (Opposite angle)
-    final double glarePos2 = (rotateY + rotateX) * 2.5;
-    final LinearGradient brightGlare2 = LinearGradient(
-      begin: Alignment(2.0 - glarePos2, -2.0 - glarePos2),
-      end: Alignment(-2.0 - glarePos2, 2.0 - glarePos2),
-      colors: const [
-        Color(0x00FFFFFF),
-        Color(0x00FFFFFF),
-        Color(0x44FFFFFF),
-        Color(0xBBFFFFFF),
-        Color(0x44FFFFFF),
-        Color(0x00FFFFFF),
-        Color(0x00FFFFFF),
-      ],
-      stops: const [0.0, 0.46, 0.49, 0.5, 0.51, 0.54, 1.0],
-    );
-    canvas.drawRect(
-      rect,
-      Paint()
-        ..blendMode = BlendMode.plus
-        ..shader = brightGlare2.createShader(rect),
-    );
-
-    // 5. Sparkles
-    for (int i = 0; i < 30; i++) {
-      // Use pseudo-random positions based on index
-      final double px =
-          ((math.sin(i * 1.73) * 0.5 + 0.5) * size.width) +
-          rotateY * size.width * 1.5;
-      final double py =
-          ((math.cos(i * 2.41) * 0.5 + 0.5) * size.height) +
-          rotateX * size.height * 1.5;
-
-      // Wrap around bounds so they scroll infinitely when tilting
-      final double wrappedPx = px % size.width;
-      final double wrappedPy = py % size.height;
-
-      final double blink = (math.sin(cycle * 3.0 + i * 1.2) + 1) / 2;
-      final double radius = 1.5 + blink * 3.0;
-
-      final Color sparkleColor = Colors.white.withValues(
-        alpha: 0.4 + blink * 0.6,
-      );
-
-      // Center dot
-      canvas.drawCircle(
-        Offset(wrappedPx, wrappedPy),
-        radius,
-        Paint()
-          ..blendMode = BlendMode.plus
-          ..shader = ui.Gradient.radial(Offset(wrappedPx, wrappedPy), radius, [
-            sparkleColor,
-            sparkleColor.withValues(alpha: 0),
-          ]),
-      );
-
-      // Horizontal flare
-      canvas.drawRect(
-        Rect.fromCenter(
-          center: Offset(wrappedPx, wrappedPy),
-          width: radius * 6,
-          height: radius * 0.8,
-        ),
-        Paint()
-          ..blendMode = BlendMode.plus
-          ..shader = ui.Gradient.radial(
-            Offset(wrappedPx, wrappedPy),
-            radius * 3,
-            [
-              Colors.white.withValues(alpha: blink),
-              Colors.white.withValues(alpha: 0),
-            ],
-          ),
-      );
-
-      // Vertical flare
-      canvas.drawRect(
-        Rect.fromCenter(
-          center: Offset(wrappedPx, wrappedPy),
-          width: radius * 0.8,
-          height: radius * 6,
-        ),
-        Paint()
-          ..blendMode = BlendMode.plus
-          ..shader = ui.Gradient.radial(
-            Offset(wrappedPx, wrappedPy),
-            radius * 3,
-            [
-              Colors.white.withValues(alpha: blink),
-              Colors.white.withValues(alpha: 0),
-            ],
-          ),
-      );
-    }
-
-    // 6. Inner border
-    canvas.drawRRect(
-      rrect.deflate(1.5),
-      Paint()
-        ..color = Colors.white.withValues(alpha: 0.3)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5,
-    );
-
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant _FoilFramePainter oldDelegate) {
     return oldDelegate.shimmerProgress != shimmerProgress ||
         oldDelegate.rotateX != rotateX ||
         oldDelegate.rotateY != rotateY;
@@ -4398,3 +4006,461 @@ class _TintedMask extends StatelessWidget {
   }
 }
 
+
+class BearScreen extends StatefulWidget {
+  const BearScreen({super.key});
+
+  @override
+  State<BearScreen> createState() => _BearScreenState();
+}
+
+class _BearScreenState extends State<BearScreen> {
+  static const double _aspectRatio = 696 / 1044;
+  static const double _maxTilt = 0.32;
+
+  double _rotateX = 0;
+  double _rotateY = 0;
+  bool _showCardLayers = true;
+  int _selectedGlowEffect = 0;
+
+  void _updateTilt(Offset localPosition, Size size) {
+    final double dx = ((localPosition.dx / size.width) * 2 - 1).clamp(
+      -1.0,
+      1.0,
+    );
+    final double dy = ((localPosition.dy / size.height) * 2 - 1).clamp(
+      -1.0,
+      1.0,
+    );
+
+    setState(() {
+      _rotateY = dx * _maxTilt;
+      _rotateX = -dy * _maxTilt;
+    });
+  }
+
+  void _updateTiltFromLayoutPosition(
+    Offset layoutPosition,
+    Offset cardTopLeft,
+    Size size,
+  ) {
+    _updateTilt(layoutPosition - cardTopLeft, size);
+  }
+
+  void _resetTilt() {
+    setState(() {
+      _rotateX = 0;
+      _rotateY = 0;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Bear Card')),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: Column(
+                children: [
+                  FilledButton.tonal(
+                    onPressed: () {
+                      setState(() {
+                        _showCardLayers = !_showCardLayers;
+                      });
+                    },
+                    child: Text(
+                      _showCardLayers
+                          ? 'Hide bear images'
+                          : 'Show bear images',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      ChoiceChip(
+                        label: const Text('Golden Sweep'),
+                        selected: _selectedGlowEffect == 0,
+                        onSelected: (val) => setState(() => _selectedGlowEffect = 0),
+                      ),
+                      ChoiceChip(
+                        label: const Text('Pulsing Aura'),
+                        selected: _selectedGlowEffect == 1,
+                        onSelected: (val) => setState(() => _selectedGlowEffect = 1),
+                      ),
+                      ChoiceChip(
+                        label: const Text('Prismatic Shift'),
+                        selected: _selectedGlowEffect == 2,
+                        onSelected: (val) => setState(() => _selectedGlowEffect = 2),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final double cardWidth = math.min(
+                    constraints.maxWidth * 0.76,
+                    330,
+                  );
+                  final double cardHeight = cardWidth / _aspectRatio;
+                  final Size cardSize = Size(cardWidth, cardHeight);
+                  final Offset cardTopLeft = Offset(
+                    (constraints.maxWidth - cardWidth) / 2,
+                    (constraints.maxHeight - cardHeight) / 2,
+                  );
+
+                  return ClipRect(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onPanDown: (details) =>
+                          _updateTiltFromLayoutPosition(
+                            details.localPosition,
+                            cardTopLeft,
+                            cardSize,
+                          ),
+                      onPanUpdate: (details) =>
+                          _updateTiltFromLayoutPosition(
+                            details.localPosition,
+                            cardTopLeft,
+                            cardSize,
+                          ),
+                      onPanEnd: (_) => _resetTilt(),
+                      onPanCancel: _resetTilt,
+                      child: Center(
+                        child: Transform(
+                          alignment: Alignment.center,
+                          transform: Matrix4.identity()
+                            ..setEntry(3, 2, 0.0013)
+                            ..rotateX(_rotateX)
+                            ..rotateY(_rotateY),
+                          child: RepaintBoundary(
+                            child: _BearCardScene(
+                              width: cardWidth,
+                              height: cardHeight,
+                              rotateX: _rotateX,
+                              rotateY: _rotateY,
+                              showCardLayers: _showCardLayers,
+                              glowEffect: _selectedGlowEffect,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BearCardScene extends StatelessWidget {
+  const _BearCardScene({
+    required this.width,
+    required this.height,
+    required this.rotateX,
+    required this.rotateY,
+    required this.showCardLayers,
+    required this.glowEffect,
+  });
+
+  final double width;
+  final double height;
+  final double rotateX;
+  final double rotateY;
+  final bool showCardLayers;
+  final int glowEffect;
+
+  @override
+  Widget build(BuildContext context) {
+    final BorderRadius artBorderRadius = BorderRadius.circular(22);
+    final Offset backgroundOffset = Offset(rotateY * -10, rotateX * 10);
+    final Offset glowOffset = Offset(rotateY * 12, rotateX * -12);
+    final Offset bearOffset = Offset(rotateY * 24, rotateX * -24);
+    const double foilBaseInset = 14;
+
+    final double angle = math.atan2(rotateY, rotateX);
+    final double hue = ((angle / math.pi) * 180 + 180) % 360;
+
+    return SizedBox(
+      width: width,
+      height: height,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(
+                painter: _ImmersiveRimPainter(
+                  rotateX: rotateX,
+                  rotateY: rotateY,
+                  foilDesign: 7, // Holo Foil
+                ),
+              ),
+            ),
+          ),
+          if (showCardLayers)
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.all(foilBaseInset),
+                child: ClipRRect(
+                  borderRadius: artBorderRadius,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Transform.translate(
+                        offset: backgroundOffset,
+                        child: Transform.scale(
+                          scale: 1.08,
+                          child: glowEffect == 2
+                              ? ColorFiltered(
+                                  colorFilter: ColorFilter.mode(
+                                    HSVColor.fromAHSV(0.45, hue, 0.6, 0.8).toColor(),
+                                    BlendMode.srcATop,
+                                  ),
+                                  child: Image.asset(
+                                    'image/bear bg.png',
+                                    fit: BoxFit.cover,
+                                  ),
+                                )
+                              : Image.asset(
+                                  'image/bear bg.png',
+                                  fit: BoxFit.cover,
+                                ),
+                        ),
+                      ),
+                      Transform.translate(
+                        offset: glowOffset,
+                        child: Transform.scale(
+                          scale: 1.04,
+                          child: glowEffect == 1
+                              ? _GlowEffectPulsingAura(
+                                  asset: 'image/bear glow 1.png',
+                                )
+                              : glowEffect == 2
+                                  ? _GlowEffectPrismatic(
+                                      asset: 'image/bear glow 1.png',
+                                      rotateX: rotateX,
+                                      rotateY: rotateY,
+                                    )
+                                  : _GlowEffectGoldenSweep(
+                                      asset: 'image/bear glow 1.png',
+                                      opacity: 0.95,
+                                      rotateX: rotateX,
+                                      rotateY: rotateY,
+                                    ),
+                        ),
+                      ),
+                      Transform.translate(
+                        offset: bearOffset,
+                        child: Transform.scale(
+                          scale: 1.03,
+                          child: Image.asset(
+                            'image/bear 1.png',
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GlowEffectPulsingAura extends StatefulWidget {
+  const _GlowEffectPulsingAura({required this.asset});
+  final String asset;
+
+  @override
+  State<_GlowEffectPulsingAura> createState() => _GlowEffectPulsingAuraState();
+}
+
+class _GlowEffectPulsingAuraState extends State<_GlowEffectPulsingAura>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        // Easing for smoother pulse
+        final double pulse = Curves.easeInOut.transform(_controller.value);
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(widget.asset, fit: BoxFit.cover),
+            ImageFiltered(
+              imageFilter: ui.ImageFilter.blur(
+                sigmaX: 4 + pulse * 12,
+                sigmaY: 4 + pulse * 12,
+              ),
+              child: Image.asset(
+                widget.asset,
+                fit: BoxFit.cover,
+                color: const Color(0xFF00E5FF).withValues(alpha: 0.3 + pulse * 0.5),
+                colorBlendMode: BlendMode.srcATop,
+              ),
+            ),
+            // Add a bright core that pulses slightly
+            Image.asset(
+              widget.asset,
+              fit: BoxFit.cover,
+              color: Colors.white.withValues(alpha: pulse * 0.3),
+              colorBlendMode: BlendMode.plus,
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _GlowEffectPrismatic extends StatelessWidget {
+  const _GlowEffectPrismatic({
+    required this.asset,
+    required this.rotateX,
+    required this.rotateY,
+  });
+
+  final String asset;
+  final double rotateX;
+  final double rotateY;
+
+  @override
+  Widget build(BuildContext context) {
+    final double tiltMagnitude = math.sqrt(rotateX * rotateX + rotateY * rotateY);
+    final double angle = math.atan2(rotateY, rotateX);
+    final double hue = ((angle / math.pi) * 180 + 180) % 360;
+
+    // Darker, more solid colors for contrast against the tinted background
+    final Color solidGlowColor = HSVColor.fromAHSV(0.95, hue, 1.0, 0.4).toColor(); 
+    final Color coreColor = HSVColor.fromAHSV(0.85 + (tiltMagnitude * 0.5).clamp(0.0, 0.15), hue, 0.9, 0.6).toColor();
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.asset(asset, fit: BoxFit.cover),
+        ImageFiltered(
+          imageFilter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: Image.asset(
+            asset,
+            fit: BoxFit.cover,
+            color: solidGlowColor,
+            colorBlendMode: BlendMode.srcATop,
+          ),
+        ),
+        Image.asset(
+          asset,
+          fit: BoxFit.cover,
+          color: coreColor,
+          colorBlendMode: BlendMode.srcATop,
+        ),
+      ],
+    );
+  }
+}
+
+class _GlowEffectGoldenSweep extends StatelessWidget {
+  const _GlowEffectGoldenSweep({
+    required this.asset,
+    required this.opacity,
+    required this.rotateX,
+    required this.rotateY,
+  });
+
+  final String asset;
+  final double opacity;
+  final double rotateX;
+  final double rotateY;
+
+  @override
+  Widget build(BuildContext context) {
+    final double angleResponse = math.sin(rotateY * 10.0 - rotateX * 7.0);
+    final double glowStrength =
+        math.max(0.0, angleResponse).clamp(0.0, 1.0);
+    final double hotSpotStrength = math.pow(glowStrength, 1.2).toDouble();
+    final Alignment glowBegin = Alignment(
+      -1.1 + rotateY * 3.0,
+      -0.9 - rotateX * 2.2,
+    );
+    final Alignment glowEnd = Alignment(
+      1.1 + rotateY * 3.0,
+      0.9 - rotateX * 2.2,
+    );
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Opacity(
+          opacity: opacity,
+          child: Image.asset(asset, fit: BoxFit.cover),
+        ),
+        ImageFiltered(
+          imageFilter: ui.ImageFilter.blur(
+            sigmaX: 5 + glowStrength * 8,
+            sigmaY: 5 + glowStrength * 8,
+          ),
+          child: Image.asset(
+            asset,
+            fit: BoxFit.cover,
+            color: const Color(0xFFFF8F00).withValues(alpha: glowStrength * 0.85),
+            colorBlendMode: BlendMode.srcIn,
+          ),
+        ),
+        ShaderMask(
+          blendMode: BlendMode.srcIn,
+          shaderCallback: (bounds) {
+            return LinearGradient(
+              begin: glowBegin,
+              end: glowEnd,
+              colors: <Color>[
+                const Color(0x00FFFFFF),
+                const Color(0xFFFFCA28).withValues(alpha: 0.2 + glowStrength * 0.4),
+                const Color(0xFFFF8F00).withValues(alpha: 0.4 + hotSpotStrength * 0.8),
+                const Color(0xFFE65100).withValues(alpha: glowStrength * 0.6),
+                const Color(0x00FFFFFF),
+              ],
+              stops: const <double>[0.0, 0.3, 0.5, 0.7, 1.0],
+            ).createShader(bounds);
+          },
+          child: Opacity(
+            opacity: hotSpotStrength * 0.9,
+            child: Image.asset(asset, fit: BoxFit.cover),
+          ),
+        ),
+      ],
+    );
+  }
+}

@@ -1,0 +1,119 @@
+--- lib/main.dart
++++ lib/main.dart
+@@ -4019,6 +4019,7 @@
+   double _rotateX = 0;
+   double _rotateY = 0;
+   bool _showCardLayers = true;
++  int _selectedGlowEffect = 0;
+ 
+   void _updateTilt(Offset localPosition, Size size) {
+     final double dx = ((localPosition.dx / size.width) * 2 - 1).clamp(
+@@ -4058,17 +4059,39 @@
+           children: [
+             Padding(
+               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+-              child: FilledButton.tonal(
+-                onPressed: () {
+-                  setState(() {
+-                    _showCardLayers = !_showCardLayers;
+-                  });
+-                },
+-                child: Text(
+-                  _showCardLayers
+-                      ? 'Hide bear images'
+-                      : 'Show bear images',
+-                ),
++              child: Column(
++                children: [
++                  FilledButton.tonal(
++                    onPressed: () {
++                      setState(() {
++                        _showCardLayers = !_showCardLayers;
++                      });
++                    },
++                    child: Text(
++                      _showCardLayers
++                          ? 'Hide bear images'
++                          : 'Show bear images',
++                    ),
++                  ),
++                  const SizedBox(height: 12),
++                  Wrap(
++                    spacing: 8,
++                    alignment: WrapAlignment.center,
++                    children: [
++                      ChoiceChip(
++                        label: const Text('Golden Sweep'),
++                        selected: _selectedGlowEffect == 0,
++                        onSelected: (val) => setState(() => _selectedGlowEffect = 0),
++                      ),
++                      ChoiceChip(
++                        label: const Text('Pulsing Aura'),
++                        selected: _selectedGlowEffect == 1,
++                        onSelected: (val) => setState(() => _selectedGlowEffect = 1),
++                      ),
++                      ChoiceChip(
++                        label: const Text('Prismatic Shift'),
++                        selected: _selectedGlowEffect == 2,
++                        onSelected: (val) => setState(() => _selectedGlowEffect = 2),
++                      ),
++                    ],
++                  ),
++                ],
+               ),
+             ),
+             Expanded(
+@@ -4115,6 +4138,7 @@
+                               rotateX: _rotateX,
+                               rotateY: _rotateY,
+                               showCardLayers: _showCardLayers,
++                              glowEffect: _selectedGlowEffect,
+                             ),
+                           ),
+                         ),
+@@ -4137,12 +4161,14 @@
+     required this.rotateX,
+     required this.rotateY,
+     required this.showCardLayers,
++    required this.glowEffect,
+   });
+ 
+   final double width;
+   final double height;
+   final double rotateX;
+   final double rotateY;
+   final bool showCardLayers;
++  final int glowEffect;
+ 
+   @override
+   Widget build(BuildContext context) {
+@@ -4197,12 +4223,20 @@
+                   Transform.translate(
+                     offset: glowOffset,
+                     child: Transform.scale(
+                       scale: 1.04,
+-                      child: _FoilLayerImage(
+-                        asset: 'image/bear glow 1.png',
+-                        opacity: 0.95,
+-                        rotateX: rotateX,
+-                        rotateY: rotateY,
+-                      ),
++                      child: glowEffect == 1
++                          ? _GlowEffectPulsingAura(
++                              asset: 'image/bear glow 1.png',
++                            )
++                          : glowEffect == 2
++                              ? _GlowEffectPrismatic(
++                                  asset: 'image/bear glow 1.png',
++                                  rotateX: rotateX,
++                                  rotateY: rotateY,
++                                )
++                              : _FoilLayerImage(
++                                  asset: 'image/bear glow 1.png',
++                                  opacity: 0.95,
++                                  rotateX: rotateX,
++                                  rotateY: rotateY,
++                                ),
+                     ),
+                   ),
+                   Transform.translate(
